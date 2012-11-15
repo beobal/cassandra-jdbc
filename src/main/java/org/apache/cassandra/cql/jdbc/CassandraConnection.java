@@ -37,8 +37,10 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
+import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
 
 import static org.apache.cassandra.cql.jdbc.Utils.*;
 
@@ -104,11 +106,19 @@ class CassandraConnection extends AbstractCassandraConnection implements Connect
             String password = props.getProperty(TAG_PASSWORD);
             String version = props.getProperty(TAG_CQL_VERSION);
 
-            TSocket socket = new TSocket(host, port);
+            TSSLTransportParameters sslParams = Utils.getTSSLTransportParameters();
+            
+            TSocket socket;    
+            socket = sslParams == null ? 
+                        new TSocket(host, port)
+                        : TSSLTransportFactory.getClientSocket(host, port, 0, sslParams);
             transport = new TFramedTransport(socket);
             TProtocol protocol = new TBinaryProtocol(transport);
             client = new Cassandra.Client(protocol);
-            socket.open();
+            if (! socket.isOpen())
+            {
+                socket.open();
+            }
 
             if (username != null)
             {

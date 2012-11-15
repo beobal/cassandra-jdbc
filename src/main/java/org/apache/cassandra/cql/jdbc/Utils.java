@@ -34,6 +34,8 @@ import java.util.regex.Pattern;
 import java.util.zip.Deflater;
 
 import org.apache.cassandra.thrift.Compression;
+import org.apache.thrift.transport.TSSLTransportFactory;
+import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -276,5 +278,36 @@ class Utils
         Matcher isUpdate = UPDATE_PATTERN.matcher(cql);
         if (isUpdate.matches()) cf = isUpdate.group(1);
         return cf;
+    }
+    
+    /**
+     * build TSSLTranportParameters by getting trust store path, trust store password,
+     * ssl protocol (default SSL) , store type (default JKS), cipher suites
+     *
+     */
+    public static TSSLTransportParameters getTSSLTransportParameters() 
+    {
+      String SSLTrustStore = System.getProperty("ssl.truststore");
+      if (SSLTrustStore == null)
+        return null;
+
+      String SSLTrustStorePassword = System.getProperty("ssl.truststore.password");
+      String SSLProtocol = System.getProperty("ssl.protocol");
+      String SSLStoreType = System.getProperty("ssl.store.type");
+      String SSLCipherSuites = System.getProperty("ssl.cipher.suites");
+
+      if (SSLProtocol == null)
+        SSLProtocol = "SSL";
+
+      if (SSLStoreType == null)
+        SSLStoreType = "JKS";
+
+      String [] cipherSuites = null;
+      if (SSLCipherSuites != null)
+        cipherSuites = SSLCipherSuites.split(",");
+
+      TSSLTransportParameters params = new TSSLTransportFactory.TSSLTransportParameters(SSLProtocol, cipherSuites);
+      params.setTrustStore(SSLTrustStore, SSLTrustStorePassword, "X509", SSLStoreType);
+      return params;
     }
 }
